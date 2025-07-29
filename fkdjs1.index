@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>Smart Farm Dashboard</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f8ff;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+    }
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      margin: 10px auto;
+      max-width: 400px;
+    }
+    .status {
+      font-size: 1.2em;
+      margin-bottom: 10px;
+    }
+    button, input {
+      padding: 10px;
+      margin-top: 5px;
+      margin-right: 5px;
+      background: #3498db;
+      border: none;
+      border-radius: 5px;
+      color: white;
+      font-size: 1em;
+      cursor: pointer;
+    }
+    input {
+      width: 80px;
+      background: white;
+      color: black;
+      border: 1px solid #ccc;
+    }
+    button:hover {
+      background: #2980b9;
+    }
+  </style>
+</head>
+<body>
+  <h1>IoT Dashboard (Firestore Real-time)</h1>
+
+  <!-- Light -->
+  <div class="card">
+    <h2>1. เปิด/ปิดไฟ</h2>
+    <div class="status" id="lightStatus">กำลังโหลด...</div>
+    <button onclick="toggleLight()">สลับสถานะไฟ</button>
+  </div>
+
+  <!-- Temperature -->
+  <div class="card">
+    <h2>2. อุณหภูมิ</h2>
+    <div class="status" id="temperature">กำลังโหลด...</div>
+    <input type="number" id="tempInput" placeholder="°C">
+    <button onclick="setTemperature()">ส่งค่า</button>
+  </div>
+
+  <!-- Humidity -->
+  <div class="card">
+    <h2>3. ความชื้น</h2>
+    <div class="status" id="humidity">กำลังโหลด...</div>
+    <input type="number" id="humidInput" placeholder="%">
+    <button onclick="setHumidity()">ส่งค่า</button>
+  </div>
+
+  <!-- Pump -->
+  <div class="card">
+    <h2>4. ปั๊มน้ำ</h2>
+    <div class="status" id="pumpStatus">กำลังโหลด...</div>
+    <button onclick="togglePump()">สลับสถานะปั๊มน้ำ</button>
+  </div>
+
+  <!-- Light Level -->
+  <div class="card">
+    <h2>5. ค่าแสง</h2>
+    <div class="status" id="lightLevel">กำลังโหลด...</div>
+    <input type="number" id="lightInput" placeholder="lux">
+    <button onclick="setLightLevel()">ส่งค่า</button>
+  </div>
+
+  <script>
+    // Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCD9nLLNYfprLLr-i8mElhf-e-f3J5vn6Y",
+      authDomain: "aum1-92099.firebaseapp.com",
+      projectId: "aum1-92099",
+      storageBucket: "aum1-92099.appspot.com",
+      messagingSenderId: "865565719323",
+      appId: "1:865565719323:web:9b986965f79ab0c7cdb1be"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // Document references
+    const lightRef = db.collection("light").doc("status");
+    const temperatureRef = db.collection("temperature").doc("sensor1");
+    const humidityRef = db.collection("humidity").doc("sensor1");
+    const pumpRef = db.collection("pump").doc("status");
+    const lightLevelRef = db.collection("lightlevel").doc("sensor1");
+
+    // Display update
+    function updateStatus(id, value, unit = '') {
+      document.getElementById(id).textContent = `${value}${unit}`;
+    }
+
+    // Light toggle
+    function toggleLight() {
+      lightRef.get().then(doc => {
+        if (doc.exists) {
+          const newValue = doc.data().value === "on" ? "off" : "on";
+          lightRef.set({ value: newValue });
+        }
+      });
+    }
+
+    // Pump toggle
+    function togglePump() {
+      pumpRef.get().then(doc => {
+        if (doc.exists) {
+          const newValue = doc.data().value === "on" ? "off" : "on";
+          pumpRef.set({ value: newValue });
+        }
+      });
+    }
+
+    // Manual set temperature
+    function setTemperature() {
+      const temp = parseFloat(document.getElementById("tempInput").value);
+      if (!isNaN(temp)) {
+        temperatureRef.set({ value: temp });
+      }
+    }
+
+    // Manual set humidity
+    function setHumidity() {
+      const humid = parseFloat(document.getElementById("humidInput").value);
+      if (!isNaN(humid)) {
+        humidityRef.set({ value: humid });
+      }
+    }
+
+    // Manual set light level
+    function setLightLevel() {
+      const lux = parseFloat(document.getElementById("lightInput").value);
+      if (!isNaN(lux)) {
+        lightLevelRef.set({ value: lux });
+      }
+    }
+
+    // Real-time Firestore listeners
+    lightRef.onSnapshot(doc => {
+      if (doc.exists) {
+        updateStatus("lightStatus", "ไฟ: " + (doc.data().value === "on" ? "เปิด" : "ปิด"));
+      }
+    });
+
+    pumpRef.onSnapshot(doc => {
+      if (doc.exists) {
+        updateStatus("pumpStatus", "ปั๊มน้ำ: " + (doc.data().value === "on" ? "ทำงาน" : "หยุด"));
+      }
+    });
+
+    temperatureRef.onSnapshot(doc => {
+      if (doc.exists) {
+        updateStatus("temperature", "อุณหภูมิ: " + doc.data().value, " °C");
+      }
+    });
+
+    humidityRef.onSnapshot(doc => {
+      if (doc.exists) {
+        updateStatus("humidity", "ความชื้น: " + doc.data().value, " %");
+      }
+    });
+
+    lightLevelRef.onSnapshot(doc => {
+      if (doc.exists) {
+        updateStatus("lightLevel", "แสง: " + doc.data().value, " lux");
+      }
+    });
+  </script>
+</body>
+</html>
